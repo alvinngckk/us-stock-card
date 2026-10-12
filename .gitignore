@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+*.pid
+*.log
+cloudflared
+cache/
+demo_*.png
+sample_*.png

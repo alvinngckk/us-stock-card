@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% if summary %}{{ summary.ticker }} 查股卡{% else %}美股查股卡{% endif %}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <a href="/">美股查股卡</a>
+      <span class="sub">版面跟每日 PDF 個股／指數頁 · RS 1個月／3個月／半年</span>
+    </div>
+    <form class="search" action="/" method="get" id="searchForm">
+      <input type="text" name="t" id="tickerInput" placeholder="輸入 ticker，例如 AAPL"
+             value="{{ ticker }}" autocomplete="off" spellcheck="false" autofocus />
+      <button type="submit" id="goBtn">查詢</button>
+    </form>
+  </header>
+
+  <main>
+    <p class="examples">試下：
+      {% for e in examples %}
+        <a href="/stock/{{ e }}">{{ e }}</a>{% if not loop.last %} · {% endif %}
+      {% endfor %}
+    </p>
+    <p class="meta">
+      價格 asof 提示：{{ asof_hint }}（美東上一個完成交易日）·
+      RS 宇宙：約 {{ rs_n }} 隻、asof {{ rs_asof }} ·
+      數據經 Yahoo（未經股息調整／dataio）
+    </p>
+
+    <div id="loading" class="loading" hidden>載入中…（首次約 5–15 秒，之後會快啲）</div>
+
+    {% if error %}
+      <div class="err">搵唔到或載入失敗：{{ error }}</div>
+    {% endif %}
+
+    {% if summary %}
+      <section class="card">
+        <img id="cardImg" src="/api/card/{{ summary.ticker }}.png?v={{ summary.asof }}"
+             alt="{{ summary.ticker }} card" width="1350" />
+        <div class="nums">
+          <h2>{{ summary.ticker }} · {{ summary.name }}</h2>
+          <ul>
+            <li><b>收市</b> {{ '%.2f'|format(summary.last) }} <span class="muted">（{{ summary.asof }}）</span></li>
+            <li><b>RS</b>
+              1個月 <span class="rs" data-v="{{ summary.rs1 }}">{{ summary.rs1 if summary.rs1 is not none else '—' }}</span>
+              · 3個月 <span class="rs" data-v="{{ summary.rs3 }}">{{ summary.rs3 if summary.rs3 is not none else '—' }}</span>
+              · 半年 <span class="rs" data-v="{{ summary.rs6 }}">{{ summary.rs6 if summary.rs6 is not none else '—' }}</span>
+            </li>
+            <li><b>RSI</b> {{ '%.1f'|format(summary.rsi) }}
+              · <b>3M vs SPY</b>
+              {% if summary.rel3_ppt is not none %}{{ '%+.1f'|format(summary.rel3_ppt) }} ppt{% else %}—{% endif %}
+            </li>
+            <li><b>Sector</b> {{ summary.sector }} · <b>Industry</b> {{ summary.industry }}</li>
+            <li><b>市值</b> {{ summary.mcap }}</li>
+            {% if summary.earn_label %}<li>{{ summary.earn_label }}</li>{% endif %}
+            <li class="muted small">{{ summary.rs_note }}</li>
+          </ul>
+          <p class="copybox" id="copyText">{{ summary.ticker }} {{ '%.2f'|format(summary.last) }} | RS {{ summary.rs1 }}/{{ summary.rs3 }}/{{ summary.rs6 }} | RSI {{ '%.1f'|format(summary.rsi) }} | asof {{ summary.asof }}</p>
+          <button type="button" class="copybtn" onclick="navigator.clipboard.writeText(document.getElementById('copyText').innerText)">複製摘要</button>
+        </div>
+      </section>
+    {% elif not error %}
+      <section class="hero">
+        <h1>輸入 ticker，輸出似 PDF 個股卡</h1>
+        <p>圖表含 EMA9／21／50、成交量、KDJ、RSI、MACD；右邊有收市／ATR／vs SPY，同 <b>RS</b>（≥70 深綠、≤30 深紅）。</p>
+      </section>
+    {% endif %}
+  </main>
+
+  <footer>
+    僅供研究參考，唔構成投資建議。Yahoo 報價或有延遲。RS 百分位對齊本刊 PDF 方法（21／63／126 日回報 vs 股票宇宙）。
+  </footer>
+
+  <script>
+    const form = document.getElementById('searchForm');
+    const loading = document.getElementById('loading');
+    form.addEventListener('submit', () => {
+      const v = document.getElementById('tickerInput').value.trim();
+      if (!v) return;
+      loading.hidden = false;
+    });
+    document.querySelectorAll('a[href^="/stock/"]').forEach(a => {
+      a.addEventListener('click', () => { loading.hidden = false; });
+    });
+    document.querySelectorAll('.rs').forEach(el => {
+      const v = parseInt(el.dataset.v, 10);
+      if (!isNaN(v)) {
+        if (v >= 70) el.style.color = '#006b45';
+        else if (v <= 30) el.style.color = '#8b0000';
+        else el.style.color = '#111';
+        el.style.fontWeight = '700';
+      }
+    });
+  </script>
+</body>
+</html>
